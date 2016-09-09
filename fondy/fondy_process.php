@@ -8,7 +8,7 @@
 #  Ver. 1.0.2
 #####################################
 */
-/*  Copyright (c) 2007 VaM Shop, http://vamshop.com */
+
 
 function get_var($name, $default = 'none') 
 {
@@ -16,17 +16,6 @@ function get_var($name, $default = 'none')
 }
 
 require (_CLASS.'order.php');
-
-// logging
-//$fp = fopen('webmoney.log', 'a+');
-//$str=date('Y-m-d H:i:s').' - ';
-//foreach ($_REQUEST as $vn=>$vv) {
-//  $str.=$vn.'='.$vv.';';
-//}
-
-//fwrite($fp, $str."\n");
-//fclose($fp);
-// variables prepearing
 
 $inv_id = get_var('orderId');
 $order = new order($inv_id);

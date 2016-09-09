@@ -94,23 +94,26 @@ class fondy
         global $order, $sendto, $osPrice, $currencies, $cart_fondy_id, $shipping;
 
         $customers_query = os_db_query("select customers_email_address from " . TABLE_CUSTOMERS . " where customers_id = {$_SESSION['customer_id']}");
-
+		
+		
         if (os_db_num_rows($customers_query)) {
             $customer_email = @mysql_result($customers_query, 0, "customers_email_address");
         }
-
+		if ($_SESSION['currency'] == 'RUR')
+			$_SESSION['currency'] == 'RUB';
+		
         $fondy_args = array(
             'order_id' => $_SESSION['cartID'] . self::ORDER_SEPARATOR . time(),
             'merchant_id' => MODULE_PAYMENT_FONDY_SHOP_ID,
-            'order_desc' => 'order',
+            'order_desc' => 'Оплата заказа №',
             'amount' => round($order->info['total'] * 100),
-            'currency' => 'UAH',
+            'currency' => $_SESSION['currency'],
             'server_callback_url' => os_href_link(FILENAME_CHECKOUT_PROCESS, '', 'SSL'),
             'response_url' => os_href_link(FILENAME_CHECKOUT_PROCESS, '', 'SSL'),
             'lang' => 'ru',
             'sender_email' => $customer_email
         );
-
+		//print_r ($cart_fondy_id);
         $fondy_args['signature'] = $this->getSignature($fondy_args, MODULE_PAYMENT_FONDY_SECRET_KEY);
 
         $process_button_string = os_draw_hidden_field('merchant_id', $fondy_args['merchant_id']) .
@@ -149,11 +152,12 @@ class fondy
 
     function before_process()
     {
+		global $insert_id;
         if ($_POST['order_status'] == self::ORDER_DECLINED) {
             $payment_error_return = 'payment_error=' . $this->code . '&error=' . urlencode(MODULE_PAYMENT_FONDY_ERROR_DECLINE);
             os_redirect(os_href_link(FILENAME_CHECKOUT_PAYMENT, $payment_error_return, 'SSL', true, false));
         }
-
+		
         $response = $_POST;
         $responseSignature = $_POST['signature'];
         foreach ($response as $k => $v) {
@@ -168,22 +172,22 @@ class fondy
         }
 
         if ($response['order_status'] != self::ORDER_APPROVED) {
-//            $error = "Thank you for shopping with us. Your payment is processing. We will inform you about results.";
-//            $payment_error_return = 'payment_error='.$this->code.'&error='.urlencode($error);
-//            os_redirect(os_href_link(FILENAME_CHECKOUT_PAYMENT, $payment_error_return, 'SSL', true, false));
+            $error = "Thank you for shopping with us. Your payment is processing. We will inform you about results.";
+            $payment_error_return = 'payment_error='.$this->code.'&error='.urlencode($error);
+            os_redirect(os_href_link(FILENAME_CHECKOUT_PAYMENT, $payment_error_return, 'SSL', true, false));
         }
 
 
         if ($response['order_status'] == self::ORDER_APPROVED) {
-            // success
+			$this->after_process();		
         }
-
         return false;
     }
 
     function after_process()
     {
-        return false;
+		global $insert_id;
+		os_db_query("UPDATE ".TABLE_ORDERS." SET orders_status='".MODULE_PAYMENT_FONDY_ORDER_STATUS_ID."' WHERE orders_id='" . $insert_id. "'");
     }
 
     function output_error()
